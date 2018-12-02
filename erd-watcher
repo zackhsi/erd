@@ -1,0 +1,36 @@
+#!/bin/bash
+set -e
+
+exit_with_usage() {
+  echo "Usage: $(basename "${BASH_SOURCE[0]}") <file-to-watch>";
+  exit 1;
+}
+
+input="$1"
+if [ -z "$input" ]; then
+  exit_with_usage
+fi
+
+if ! [ -f "$input" ]; then
+  echo "ERROR: $input is not a file!"
+  exit_with_usage
+fi
+
+echo "Watching $input for changes..."
+fswatch --print0 "$input" | while read -rd "" filepath; do
+  filename_with_ext=$(basename -- "$filepath")
+  filename="${filename_with_ext%.*}"
+  output_filepath="$HOME/Desktop/${filename}.png"
+  echo -en "$(tput setaf 3)" # Yellow.
+  echo "---> $filename_with_ext changed, rebuilding..."
+  echo -en "$(tput sgr0)" # Reset.
+  if erd --input "$filepath" --output "$output_filepath"; then
+    echo -en "$(tput setaf 2)" # Green.
+    echo "---> $output_filepath built!"
+    echo -en "$(tput sgr0)" # Reset.
+  else
+    echo -en "$(tput setaf 1)" # Red.
+    echo "---> ERROR: build failed!"
+    echo -en "$(tput sgr0)" # Reset.
+  fi
+done
