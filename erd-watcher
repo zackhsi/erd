@@ -16,21 +16,29 @@ if ! [ -f "$input" ]; then
   exit_with_usage
 fi
 
-echo "Watching $input for changes..."
-fswatch --print0 "$input" | while read -rd "" filepath; do
-  filename_with_ext=$(basename -- "$filepath")
-  filename="${filename_with_ext%.*}"
-  output_filepath="$HOME/Desktop/${filename}.png"
-  echo -en "$(tput setaf 3)" # Yellow.
-  echo "---> $filename_with_ext changed, rebuilding..."
-  echo -en "$(tput sgr0)" # Reset.
-  if erd --input "$filepath" --output "$output_filepath"; then
+filename_with_ext=$(basename -- "$input")
+filename_without_ext="${filename_with_ext%.*}"
+output_filepath="$HOME/Desktop/${filename_without_ext}.png"
+
+build() {
+  if erd --input "$1" --output "$2"; then
     echo -en "$(tput setaf 2)" # Green.
-    echo "---> $output_filepath built!"
+    echo "---> $2 built!"
     echo -en "$(tput sgr0)" # Reset.
   else
     echo -en "$(tput setaf 1)" # Red.
     echo "---> ERROR: build failed!"
     echo -en "$(tput sgr0)" # Reset.
   fi
+}
+
+echo "Performing initial build..."
+build "$input" "$output_filepath"
+
+echo "Watching $input for changes..."
+fswatch --print0 "$input" | while read -rd "" _; do
+  echo -en "$(tput setaf 3)" # Yellow.
+  echo "---> $filename_with_ext changed, rebuilding..."
+  echo -en "$(tput sgr0)" # Reset.
+  build "$input" "$output_filepath"
 done
